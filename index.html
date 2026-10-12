@@ -1,281 +1,408 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DRIFT TRACKS</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#05070c;color:white;font-family:Arial,sans-serif;overflow:hidden}
-canvas{display:block;width:100%;height:100dvh}
-#hud{position:absolute;top:20px;left:20px;right:20px;display:flex;justify-content:space-between;pointer-events:none}
-.logo{font-size:26px;font-weight:900;letter-spacing:2px;color:#fff}
-.logo span{color:#00ffcc}
-.stats{display:flex;gap:10px}
-.stat{background:#0d1322;padding:10px 15px;border-radius:10px;border:1px solid #ffffff22;min-width:110px;text-align:center}
-.label{font-size:9px;color:#89a2bc;letter-spacing:1px;margin-bottom:2px}
-.value{font-size:20px;font-weight:bold}
-#score{color:#ffe600}
-#combo{color:#ff0055}
-#speed{color:#00ffcc}
-#menu{position:absolute;inset:0;background:#05070cf0;display:flex;align-items:center;justify-content:center;padding:20px}
-.panel{width:420px;max-width:100%;text-align:center;background:#0d1322;border:1px solid #ffffff33;border-radius:20px;padding:30px}
-h1{font-size:48px;line-height:1;margin:10px 0 20px}
-h1 span{color:#00ffcc}
-p{color:#89a2bc;font-size:13px;line-height:1.5;margin-bottom:20px}
-button{cursor:pointer;border:0;border-radius:10px;padding:14px;font-weight:bold;font-size:14px}
-.start{width:100%;background:#00ffcc;color:#05070c;margin-top:10px}
-#controls{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;pointer-events:none}
-.group{display:flex;gap:10px;pointer-events:auto}
-.control{width:70px;height:70px;background:#0d1322cc;color:white;border:1px solid #ffffff44;font-size:24px;border-radius:14px;touch-action:none}
-.gas{color:#00ffcc;border-color:#00ffcc}
-.brake{color:#ff0055;border-color:#ff0055}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Kart Parkour</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #050510;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #00f3ff;
+        }
+        canvas {
+            display: block;
+            background: #08081a;
+        }
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00f3ff;
+            pointer-events: none;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 16, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        h1 {
+            font-size: 42px;
+            color: #ff0055;
+            text-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
+        }
+        p {
+            font-size: 18px;
+            color: #00f3ff;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #050510;
+            background: #00f3ff;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 0 15px #00f3ff;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px #00f3ff;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="ui">
+            <div id="score">SCORE: 0</div>
+            <div id="speed">SPEED: 100 MPH</div>
+        </div>
+        <div id="game-over-screen">
+            <h1>NEON CRASH!</h1>
+            <p id="final-score">Final Score: 0</p>
+            <button onclick="resetGame()">PLAY AGAIN</button>
+        </div>
+    </div>
 
-<div id="hud">
- <div class="logo">DRIFT<span>TRACKS</span></div>
- <div class="stats">
-  <div class="stat"><div class="label">DRIFT COMBO</div><div class="value" id="combo">1.0x</div></div>
-  <div class="stat"><div class="label">SCORE</div><div class="value" id="score">0</div></div>
-  <div class="stat"><div class="label">SPEED</div><div class="value" id="speed">0</div></div>
- </div>
-</div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('final-score');
+        const gameOverScreen = document.getElementById('game-over-screen');
 
-<div id="menu">
- <div class="panel">
-  <h1>PRO DRIFT<br><span>TRACK</span></h1>
-  <p>Hit the apex, slide through sharp corners, and chain huge drift combos!</p>
-  <button class="start" id="start">START ENGINE ▶</button>
-  <p style="margin-top:15px;font-size:11px;">Controls: WASD / Arrow Keys or On-Screen Buttons</p>
- </div>
-</div>
+        // Game State
+        let isGameOver = false;
+        let score = 0;
+        let speed = 8;
+        let distance = 0;
 
-<div id="controls">
- <div class="group">
-  <button class="control" data-key="left">◀</button>
-  <button class="control" data-key="right">▶</button>
- </div>
- <div class="group">
-  <button class="control brake" data-key="brake">▼</button>
-  <button class="control gas" data-key="gas">▲</button>
- </div>
-</div>
+        // Player Kart
+        const kart = {
+            x: canvas.width / 2,
+            y: 380,
+            width: 40,
+            height: 60,
+            xVelocity: 0,
+            yOffset: 0, // Vertical offset for jumping
+            yVelocity: 0,
+            isJumping: false,
+            gravity: 0.8,
+            jumpStrength: -14
+        };
 
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+        // Inputs
+        const keys = {
+            Left: false,
+            Right: false,
+            Jump: false
+        };
 
-let W, H;
-function resize() {
-    W = canvas.width = innerWidth;
-    H = canvas.height = innerHeight;
-}
-addEventListener('resize', resize);
-resize();
+        // Track & Obstacles
+        const trackLanes = [260, 350, 440, 530]; // Lane X positions
+        let obstacles = [];
+        let particles = [];
 
-let running = false;
-let score = 0, combo = 1, speed = 0;
-let particles = [];
+        // Controls Listener
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = true;
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+                if (!keys.Jump && !kart.isJumping && !isGameOver) {
+                    kart.yVelocity = kart.jumpStrength;
+                    kart.isJumping = true;
+                }
+                keys.Jump = true;
+            }
+        });
 
-// Car physics state
-const car = {
-    x: 0, y: 0,
-    angle: 0,
-    vx: 0, vy: 0,
-    speed: 0,
-    maxSpeed: 14,
-    accel: 0.15,
-    friction: 0.98,
-    steerSpeed: 0.05,
-    driftFactor: 0.92
-};
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.Left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.Right = false;
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') keys.Jump = false;
+        });
 
-const keys = { left: false, right: false, gas: false, brake: false };
+        // Spawn Obstacles & Gaps
+        function spawnObstacle() {
+            const laneIndex = Math.floor(Math.random() * 3);
+            const laneX = trackLanes[laneIndex];
+            const type = Math.random() > 0.4 ? 'barrier' : 'ramp'; // Ramp or Barrier
 
-// Track Layout
-const trackPoints = [
-    {x: 400, y: 300},
-    {x: 1000, y: 200},
-    {x: 1500, y: 600},
-    {x: 1200, y: 1100},
-    {x: 600, y: 1200},
-    {x: 200, y: 800}
-];
-
-document.getElementById('start').onclick = () => {
-    running = true;
-    document.getElementById('menu').style.display = 'none';
-    car.x = trackPoints[0].x;
-    car.y = trackPoints[0].y;
-    car.angle = 0;
-    car.speed = 0;
-    score = 0;
-};
-
-// Controls setup
-document.querySelectorAll('[data-key]').forEach(b => {
-    const k = b.dataset.key;
-    const on = e => { e.preventDefault(); keys[k] = true; };
-    const off = e => { e.preventDefault(); keys[k] = false; };
-    b.addEventListener('pointerdown', on);
-    b.addEventListener('pointerup', off);
-    b.addEventListener('pointercancel', off);
-});
-
-addEventListener('keydown', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'arrowleft' || k === 'a') keys.left = true;
-    if (k === 'arrowright' || k === 'd') keys.right = true;
-    if (k === 'arrowup' || k === 'w') keys.gas = true;
-    if (k === 'arrowdown' || k === 's') keys.brake = true;
-});
-
-addEventListener('keyup', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'arrowleft' || k === 'a') keys.left = false;
-    if (k === 'arrowright' || k === 'd') keys.right = false;
-    if (k === 'arrowup' || k === 'w') keys.gas = false;
-    if (k === 'arrowdown' || k === 's') keys.brake = false;
-});
-
-function update() {
-    if (!running) return;
-
-    if (keys.gas) car.speed = Math.min(car.maxSpeed, car.speed + car.accel);
-    if (keys.brake) car.speed = Math.max(-4, car.speed - car.accel * 1.5);
-    
-    car.speed *= car.friction;
-
-    let steerIntensity = 0;
-    if (keys.left) steerIntensity = -1;
-    if (keys.right) steerIntensity = 1;
-
-    if (Math.abs(car.speed) > 0.5) {
-        car.angle += steerIntensity * car.steerSpeed * (car.speed / car.maxSpeed);
-    }
-
-    const forwardX = Math.cos(car.angle);
-    const forwardY = Math.sin(car.angle);
-
-    let targetVx = forwardX * car.speed;
-    let targetVy = forwardY * car.speed;
-
-    car.vx = car.vx * car.driftFactor + targetVx * (1 - car.driftFactor);
-    car.vy = car.vy * car.driftFactor + targetVy * (1 - car.driftFactor);
-
-    car.x += car.vx;
-    car.y += car.vy;
-
-    let movementAngle = Math.atan2(car.vy, car.vx);
-    let driftAngle = Math.abs(car.angle - movementAngle);
-    while (driftAngle > Math.PI) driftAngle -= Math.PI * 2;
-    driftAngle = Math.abs(driftAngle);
-
-    let currentSpeedMag = Math.hypot(car.vx, car.vy);
-    if (driftAngle > 0.3 && currentSpeedMag > 4) {
-        let driftValue = Math.floor(currentSpeedMag * driftAngle * 10);
-        combo = +(1 + driftAngle * 2).toFixed(1);
-        score += Math.floor(driftValue * combo);
-
-        if (Math.random() < 0.6) {
-            particles.push({
-                x: car.x - forwardX * 15 + (Math.random() - 0.5) * 10,
-                y: car.y - forwardY * 15 + (Math.random() - 0.5) * 10,
-                alpha: 0.5,
-                size: 8 + Math.random() * 8
+            obstacles.push({
+                x: laneX,
+                y: -100,
+                width: 70,
+                height: type === 'ramp' ? 40 : 30,
+                type: type,
+                passed: false
             });
         }
-    } else {
-        combo = 1.0;
-    }
 
-    document.getElementById('score').textContent = score;
-    document.getElementById('combo').textContent = combo + 'x';
-    document.getElementById('speed').textContent = Math.round(currentSpeedMag * 12);
-}
+        // Particle System for Sparks
+        function createSparks(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 20,
+                    color: color
+                });
+            }
+        }
 
-function drawTrack() {
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, W, H);
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            speed = 8;
+            distance = 0;
+            obstacles = [];
+            particles = [];
+            kart.x = canvas.width / 2;
+            kart.yOffset = 0;
+            kart.isJumping = false;
+            gameOverScreen.classList.add('hidden');
+            requestAnimationFrame(gameLoop);
+        }
 
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 180;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+        function update() {
+            if (isGameOver) return;
 
-    ctx.beginPath();
-    ctx.moveTo(trackPoints[0].x, trackPoints[0].y);
-    for (let i = 1; i < trackPoints.length; i++) {
-        ctx.lineTo(trackPoints[i].x, trackPoints[i].y);
-    }
-    ctx.closePath();
-    ctx.stroke();
+            // Update Score & Speed
+            distance += speed;
+            score = Math.floor(distance / 10);
+            scoreEl.innerText = `SCORE: ${score}`;
+            if (speed < 18) speed += 0.001; // Gradually increase difficulty
 
-    ctx.strokeStyle = '#ff005522';
-    ctx.lineWidth = 190;
-    ctx.stroke();
-}
+            // Player Steering
+            if (keys.Left) kart.xVelocity = -7;
+            else if (keys.Right) kart.xVelocity = 7;
+            else kart.xVelocity *= 0.8;
 
-function draw() {
-    ctx.save();
-    let camX = W / 2 - car.x;
-    let camY = H / 2 - car.y;
-    ctx.translate(camX, camY);
+            kart.x += kart.xVelocity;
 
-    drawTrack();
+            // Track Boundaries
+            if (kart.x < 220) kart.x = 220;
+            if (kart.x > 580) kart.x = 580;
 
-    for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        ctx.fillStyle = `rgba(200, 200, 200, ${p.alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-        p.alpha -= 0.02;
-        p.size += 0.3;
-        if (p.alpha <= 0) particles.splice(i, 1);
-    }
+            // Player Jump Physics
+            if (kart.isJumping) {
+                kart.yOffset += kart.yVelocity;
+                kart.yVelocity += kart.gravity;
 
-    ctx.save();
-    ctx.translate(car.x, car.y);
-    ctx.rotate(car.angle);
+                if (kart.yOffset >= 0) {
+                    kart.yOffset = 0;
+                    kart.isJumping = false;
+                    createSparks(kart.x, kart.y + 30, '#00f3ff');
+                }
+            }
 
-    // Car Shadow
-    ctx.fillStyle = '#0008';
-    ctx.fillRect(-22, -12, 44, 24);
+            // Spawn Logic
+            if (Math.random() < 0.025) {
+                const lastObs = obstacles[obstacles.length - 1];
+                if (!lastObs || lastObs.y > 150) {
+                    spawnObstacle();
+                }
+            }
 
-    // Tires
-    ctx.fillStyle = '#111';
-    ctx.fillRect(-18, -16, 10, 6);
-    ctx.fillRect(8, -16, 10, 6);
-    ctx.fillRect(-18, 10, 10, 6);
-    ctx.fillRect(8, 10, 10, 6);
+            // Move Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += speed;
 
-    // Body
-    ctx.fillStyle = '#00ffcc';
-    ctx.beginPath();
-    ctx.roundRect(-20, -12, 40, 24, 6);
-    ctx.fill();
+                // Collision Detection
+                const kartBox = {
+                    left: kart.x - kart.width / 2,
+                    right: kart.x + kart.width / 2,
+                    top: kart.y - kart.height / 2 + kart.yOffset,
+                    bottom: kart.y + kart.height / 2 + kart.yOffset
+                };
 
-    // Windshield
-    ctx.fillStyle = '#0a0f1d';
-    ctx.fillRect(-2, -10, 12, 20);
+                const obsBox = {
+                    left: obs.x,
+                    right: obs.x + obs.width,
+                    top: obs.y,
+                    bottom: obs.y + obs.height
+                };
 
-    ctx.restore();
-    ctx.restore();
-}
+                // Check overlap
+                if (kartBox.right > obsBox.left &&
+                    kartBox.left < obsBox.right &&
+                    kartBox.bottom > obsBox.top &&
+                    kartBox.top < obsBox.bottom) {
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
+                    if (obs.type === 'barrier') {
+                        // Must jump higher than obstacle height to clear
+                        if (kart.yOffset > -20) {
+                            endGame();
+                        }
+                    } else if (obs.type === 'ramp') {
+                        // Hit a ramp! Launch into parkour air time
+                        kart.yVelocity = -16;
+                        kart.isJumping = true;
+                        createSparks(kart.x, kart.y, '#ff0055');
+                        obstacles.splice(i, 1);
+                        continue;
+                    }
+                }
 
-requestAnimationFrame(loop);
-</script>
+                // Remove off-screen obstacles
+                if (obs.y > canvas.height + 50) {
+                    obstacles.splice(i, 1);
+                }
+            }
 
+            // Particles Update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            finalScoreEl.innerText = `Final Score: ${score}`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function draw() {
+            // Clear Background
+            ctx.fillStyle = '#08081a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Perspective Highway / Track
+            ctx.strokeStyle = '#00f3ff';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00f3ff';
+
+            // Track Edges
+            ctx.beginPath();
+            ctx.moveTo(200, 0); ctx.lineTo(200, canvas.height);
+            ctx.moveTo(600, 0); ctx.lineTo(600, canvas.height);
+            ctx.stroke();
+
+            // Moving Grid Lines (3D horizon feel)
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
+            const gridOffset = (distance % 40);
+            for (let y = gridOffset; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(200, y);
+                ctx.lineTo(600, y);
+                ctx.stroke();
+            }
+
+            // Draw Obstacles
+            obstacles.forEach(obs => {
+                if (obs.type === 'barrier') {
+                    ctx.fillStyle = '#ff0055';
+                    ctx.shadowColor = '#ff0055';
+                    ctx.shadowBlur = 12;
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                } else if (obs.type === 'ramp') {
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.shadowColor = '#ffcc00';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + obs.height);
+                    ctx.lineTo(obs.x + obs.width / 2, obs.y);
+                    ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
+
+            // Draw Neon Kart
+            ctx.save();
+            ctx.translate(kart.x, kart.y + kart.yOffset);
+
+            // Kart Shadow (when jumping)
+            if (kart.isJumping) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(0, -kart.yOffset, 20, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Kart Glow & Body
+            ctx.fillStyle = '#00f3ff';
+            ctx.shadowColor = '#00f3ff';
+            ctx.shadowBlur = 20;
+            ctx.fillRect(-kart.width / 2, -kart.height / 2, kart.width, kart.height);
+
+            // Inner Neon Core
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-kart.width / 4, -kart.height / 4, kart.width / 2, kart.height / 2);
+
+            // Trail Sparks
+            ctx.fillStyle = '#ff0055';
+            ctx.fillRect(-12, kart.height / 2, 8, 10 + Math.random() * 10);
+            ctx.fillRect(4, kart.height / 2, 8, 10 + Math.random() * 10);
+
+            ctx.restore();
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 8;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if (!isGameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Start initial state
+        resetGame();
+    </script>
 </body>
 </html>
